@@ -24,7 +24,7 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link href="/" className="text-2xl font-bold text-pink-600">
-          MaBoutique
+          Original Uk
         </Link>
 
         {/* Navigation desktop */}

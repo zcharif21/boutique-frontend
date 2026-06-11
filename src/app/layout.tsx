@@ -10,7 +10,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Ma Boutique — Vêtements Femme, Homme, Enfant',
+  title: 'Original Uk — Vêtements Femme, Homme, Enfant',
   description: 'Boutique de vêtements en ligne — livraison en Algérie',
 };
 
