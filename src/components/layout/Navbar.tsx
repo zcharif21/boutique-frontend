@@ -57,11 +57,16 @@ export default function Navbar() {
           {/* Compte */}
           {user ? (
             <div className="flex items-center gap-2">
-              {isAdmin && (
+              {isAdmin ? (
                 <Link href="/admin" className="text-sm text-pink-600 font-medium hover:underline">
                   Admin
                 </Link>
+              ) : (
+                <Link href="/orders" className="text-sm text-gray-600 font-medium hover:text-pink-600">
+                  Mes commandes
+                </Link>
               )}
+              <span className="text-sm text-gray-500">{user.name}</span>
               <button onClick={logout} className="p-2 hover:bg-gray-100 rounded-lg" title="Déconnexion">
                 <LogOut size={20} className="text-gray-600" />
               </button>
