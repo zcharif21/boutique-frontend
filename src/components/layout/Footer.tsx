@@ -11,16 +11,13 @@ export default function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-400 mt-16">
       <div className="max-w-7xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Logo + description */}
         <div>
-          <span className="text-white text-xl font-bold">MaBoutique</span>
+          <span className="text-white text-xl font-bold tracking-wide">Original UK</span>
           <p className="mt-2 text-sm leading-relaxed">
             Vêtements pour toute la famille.<br />
             Livraison partout en Algérie.
           </p>
         </div>
-
-        {/* Catégories */}
         <div>
           <h4 className="text-white font-semibold mb-3">Catégories</h4>
           <ul className="space-y-2 text-sm">
@@ -33,20 +30,17 @@ export default function Footer() {
             ))}
           </ul>
         </div>
-
-        {/* Contact */}
         <div>
           <h4 className="text-white font-semibold mb-3">Contact</h4>
           <ul className="space-y-2 text-sm">
-            <li>📍 Algérie</li>
-            <li>📞 +213 XX XX XX XX</li>
-            <li>✉️ contact@maboutique.dz</li>
+            <li>Algérie</li>
+            <li>+213 XX XX XX XX</li>
+            <li>contact@originaluk.dz</li>
           </ul>
         </div>
       </div>
-
       <div className="border-t border-gray-800 text-center py-4 text-xs">
-        © {new Date().getFullYear()} MaBoutique — Tous droits réservés
+        © {new Date().getFullYear()} Original UK — Tous droits réservés
       </div>
     </footer>
   );
