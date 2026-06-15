@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { Plus, Pencil, Trash2, Package, Save, X, BarChart3, ShoppingBag } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, Save, X, ShoppingBag } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
@@ -12,18 +12,20 @@ import toast from 'react-hot-toast';
 type Tab = 'products' | 'orders';
 
 const EMPTY_FORM = {
-  name: '', description: '', price: '', stock_qty: '', category_id: '', is_active: true,
+  name: '', description: '', price: '', stock_qty: '0', category_id: '', is_active: true,
 };
+
+const EMPTY_VARIANT = { size: '', color: '', stock_qty: '' };
 
 export default function AdminPage() {
   const { user, isAdmin, loading } = useAuth();
   const router = useRouter();
 
   const [tab, setTab] = useState<Tab>('products');
-  const [products, setProducts]   = useState<Product[]>([]);
+  const [products, setProducts]     = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [orders, setOrders]       = useState<Order[]>([]);
-  const [fetching, setFetching]   = useState(true);
+  const [orders, setOrders]         = useState<Order[]>([]);
+  const [fetching, setFetching]     = useState(true);
 
   const [showForm, setShowForm]   = useState(false);
   const [editing, setEditing]     = useState<Product | null>(null);
@@ -32,7 +34,11 @@ export default function AdminPage() {
   const [saving, setSaving]       = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Protéger la page — admin seulement
+  // Variantes
+  const [variants, setVariants]         = useState<any[]>([]);
+  const [newVariant, setNewVariant]     = useState({ ...EMPTY_VARIANT });
+  const [loadingVars, setLoadingVars]   = useState(false);
+
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) router.push('/auth/login');
   }, [user, isAdmin, loading]);
@@ -56,15 +62,33 @@ export default function AdminPage() {
     finally { setFetching(false); }
   };
 
-  const openCreate = () => { setEditing(null); setForm({ ...EMPTY_FORM }); setShowForm(true); };
-  const openEdit   = (p: Product) => {
+  const openCreate = () => {
+    setEditing(null);
+    setForm({ ...EMPTY_FORM });
+    setVariants([]);
+    setNewVariant({ ...EMPTY_VARIANT });
+    setShowForm(true);
+  };
+
+  const openEdit = (p: Product) => {
     setEditing(p);
     setForm({
       name: p.name, description: p.description || '', price: String(p.price),
       stock_qty: String(p.stock_qty), category_id: String(p.category_id || ''),
       is_active: p.is_active,
     });
+    setNewVariant({ ...EMPTY_VARIANT });
+    loadVariants(p.id);
     setShowForm(true);
+  };
+
+  const loadVariants = async (productId: number) => {
+    setLoadingVars(true);
+    try {
+      const res = await api.get(`/api/products/${productId}/variants`);
+      setVariants(res.data);
+    } catch { setVariants([]); }
+    finally { setLoadingVars(false); }
   };
 
   const handleSave = async () => {
@@ -75,17 +99,73 @@ export default function AdminPage() {
       Object.entries(form).forEach(([k, v]) => fd.append(k, String(v)));
       if (imageFile) fd.append('image', imageFile);
 
+      let savedProduct: any;
       if (editing) {
-        await api.put(`/api/products/${editing.id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        const res = await api.put(`/api/products/${editing.id}`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        savedProduct = res.data;
         toast.success('Produit modifié');
       } else {
-        await api.post('/api/products', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        const res = await api.post('/api/products', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+        savedProduct = res.data;
         toast.success('Produit ajouté');
       }
+
+      // Sauvegarder les variantes en attente (pour nouveau produit)
+      if (!editing && variants.length > 0) {
+        const pid = savedProduct.id || savedProduct.product?.id;
+        if (pid) {
+          for (const v of variants) {
+            await api.post(`/api/products/${pid}/variants`, v);
+          }
+        }
+      }
+
       setShowForm(false);
       fetchAll();
     } catch { toast.error('Erreur lors de la sauvegarde'); }
     finally { setSaving(false); }
+  };
+
+  const handleAddVariant = async () => {
+    if (!newVariant.size && !newVariant.color) return toast.error('Taille ou couleur requise');
+    if (newVariant.stock_qty === '') return toast.error('Stock requis');
+
+    if (editing) {
+      // Produit existant → sauvegarder directement
+      try {
+        const res = await api.post(`/api/products/${editing.id}/variants`, {
+          size: newVariant.size || null,
+          color: newVariant.color || null,
+          stock_qty: parseInt(newVariant.stock_qty),
+        });
+        setVariants(prev => [...prev, res.data]);
+        setNewVariant({ ...EMPTY_VARIANT });
+        toast.success('Variante ajoutée');
+      } catch { toast.error('Erreur ajout variante'); }
+    } else {
+      // Nouveau produit → stocker localement
+      setVariants(prev => [...prev, { ...newVariant, stock_qty: parseInt(newVariant.stock_qty), id: Date.now() }]);
+      setNewVariant({ ...EMPTY_VARIANT });
+    }
+  };
+
+  const handleDeleteVariant = async (variantId: number) => {
+    if (editing) {
+      try {
+        await api.delete(`/api/products/variants/${variantId}`);
+        setVariants(prev => prev.filter(v => v.id !== variantId));
+        toast.success('Variante supprimée');
+      } catch { toast.error('Erreur suppression'); }
+    } else {
+      setVariants(prev => prev.filter(v => v.id !== variantId));
+    }
+  };
+
+  const handleUpdateVariantStock = async (variantId: number, qty: number) => {
+    try {
+      await api.patch(`/api/products/variants/${variantId}`, { stock_qty: qty });
+      setVariants(prev => prev.map(v => v.id === variantId ? { ...v, stock_qty: qty } : v));
+    } catch { toast.error('Erreur mise à jour'); }
   };
 
   const handleDelete = async (id: number) => {
@@ -110,6 +190,11 @@ export default function AdminPage() {
       toast.success('Statut mis à jour');
       fetchAll();
     } catch { toast.error('Erreur'); }
+  };
+
+  const isNew = (createdAt: string) => {
+    const diff = Date.now() - new Date(createdAt).getTime();
+    return diff < 7 * 24 * 60 * 60 * 1000;
   };
 
   if (loading || fetching) {
@@ -140,12 +225,9 @@ export default function AdminPage() {
       {/* Onglets */}
       <div className="flex gap-2 mb-6 border-b">
         {([['products','Produits & Stock',Package], ['orders','Commandes',ShoppingBag]] as const).map(([key, label, Icon]) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
+          <button key={key} onClick={() => setTab(key)}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors
-              ${tab === key ? 'border-pink-600 text-pink-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-          >
+              ${tab === key ? 'border-pink-600 text-pink-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
             <Icon size={16} /> {label}
           </button>
         ))}
@@ -160,7 +242,7 @@ export default function AdminPage() {
             </button>
           </div>
 
-          {/* Formulaire ajout/modif */}
+          {/* Formulaire */}
           {showForm && (
             <div className="card p-6 mb-6 border-pink-200 border">
               <div className="flex items-center justify-between mb-4">
@@ -169,7 +251,9 @@ export default function AdminPage() {
                 </h2>
                 <button onClick={() => setShowForm(false)}><X size={20} className="text-gray-500" /></button>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+
+              {/* Champs produit */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                 <div className="col-span-2 md:col-span-1">
                   <label className="text-xs font-medium text-gray-600 mb-1 block">Nom *</label>
                   <input className="input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
@@ -179,7 +263,7 @@ export default function AdminPage() {
                   <input type="number" className="input" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">Stock</label>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Stock général</label>
                   <input type="number" className="input" value={form.stock_qty} onChange={e => setForm(f => ({ ...f, stock_qty: e.target.value }))} />
                 </div>
                 <div>
@@ -201,7 +285,70 @@ export default function AdminPage() {
                     value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
                 </div>
               </div>
-              <div className="flex items-center gap-3 mt-4">
+
+              {/* Section Variantes */}
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Tailles & Couleurs (variantes)</h3>
+
+                {/* Liste variantes existantes */}
+                {loadingVars ? (
+                  <p className="text-xs text-gray-400 mb-3">Chargement variantes...</p>
+                ) : variants.length > 0 ? (
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {variants.map(v => (
+                      <div key={v.id} className="flex items-center gap-2 bg-gray-50 border rounded-lg px-3 py-2 text-sm">
+                        {v.color && <span className="font-medium text-gray-700">{v.color}</span>}
+                        {v.color && v.size && <span className="text-gray-400">/</span>}
+                        {v.size && <span className="font-medium text-gray-700">{v.size}</span>}
+                        <span className="text-gray-400 text-xs">—</span>
+                        {editing ? (
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => handleUpdateVariantStock(v.id, Math.max(0, v.stock_qty - 1))}
+                              className="w-5 h-5 border rounded-full text-xs flex items-center justify-center hover:bg-gray-200">−</button>
+                            <span className={`w-8 text-center text-xs font-bold ${v.stock_qty === 0 ? 'text-red-500' : 'text-green-600'}`}>
+                              {v.stock_qty}
+                            </span>
+                            <button onClick={() => handleUpdateVariantStock(v.id, v.stock_qty + 1)}
+                              className="w-5 h-5 border rounded-full text-xs flex items-center justify-center hover:bg-gray-200">+</button>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-green-600 font-bold">{v.stock_qty}</span>
+                        )}
+                        <button onClick={() => handleDeleteVariant(v.id)} className="text-red-400 hover:text-red-600">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-gray-400 mb-3">Aucune variante — le stock général sera utilisé.</p>
+                )}
+
+                {/* Ajouter une variante */}
+                <div className="flex flex-wrap gap-2 items-end">
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Couleur</label>
+                    <input className="input w-28 text-sm" placeholder="ex: Rouge"
+                      value={newVariant.color} onChange={e => setNewVariant(v => ({ ...v, color: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Taille</label>
+                    <input className="input w-20 text-sm" placeholder="ex: 38"
+                      value={newVariant.size} onChange={e => setNewVariant(v => ({ ...v, size: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Stock</label>
+                    <input type="number" className="input w-20 text-sm" placeholder="0"
+                      value={newVariant.stock_qty} onChange={e => setNewVariant(v => ({ ...v, stock_qty: e.target.value }))} />
+                  </div>
+                  <button onClick={handleAddVariant}
+                    className="btn-primary text-sm flex items-center gap-1 h-10">
+                    <Plus size={14} /> Ajouter
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 mt-6">
                 <button onClick={handleSave} disabled={saving} className="btn-primary flex items-center gap-2">
                   <Save size={16} /> {saving ? 'Sauvegarde...' : 'Enregistrer'}
                 </button>
@@ -227,11 +374,14 @@ export default function AdminPage() {
                   <tr key={p.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                        <div className="relative w-10 h-10 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
                           {p.image_url
                             ? <Image src={p.image_url} alt={p.name} width={40} height={40} className="object-cover w-full h-full" />
                             : <Package size={20} className="text-gray-400 m-auto mt-2.5" />
                           }
+                          {p.created_at && isNew(p.created_at) && (
+                            <span className="absolute -top-1 -right-1 bg-green-500 text-white text-[9px] font-bold px-1 rounded">NEW</span>
+                          )}
                         </div>
                         <span className="font-medium text-gray-800">{p.name}</span>
                       </div>
@@ -294,11 +444,8 @@ export default function AdminPage() {
                     {o.total.toLocaleString('fr-DZ')} DA
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <select
-                      value={o.status}
-                      onChange={e => handleStatus(o.id, e.target.value)}
-                      className="text-xs border rounded px-2 py-1 bg-white"
-                    >
+                    <select value={o.status} onChange={e => handleStatus(o.id, e.target.value)}
+                      className="text-xs border rounded px-2 py-1 bg-white">
                       <option value="en_attente">En attente</option>
                       <option value="confirmee">Confirmée</option>
                       <option value="expediee">Expédiée</option>
