@@ -97,7 +97,7 @@ export default function ProductDetailPage() {
       if (sizes.length  > 0 && !selectedSize)  return toast.error('Veuillez choisir une taille');
       if (availableStock === 0) return toast.error('Stock insuffisant pour cette variante');
     }
-    addItem(product, qty);
+    addItem(product, qty, selectedColor, selectedSize);
     toast.success(`${qty}x "${product.name}" ajouté au panier !`);
   };
 

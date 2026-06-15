@@ -51,4 +51,13 @@ export interface Order {
 export interface CartItem {
   product: Product;
   quantity: number;
+  selectedColor?: string | null;
+  selectedSize?: string | null;
+}
+
+export interface OrderItemInput {
+  product_id: number;
+  quantity: number;
+  color?: string | null;
+  size?: string | null;
 }
