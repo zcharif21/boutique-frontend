@@ -10,20 +10,39 @@ import { Product } from '@/types';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
 
+interface Variant {
+  id: number;
+  size: string | null;
+  color: string | null;
+  stock_qty: number;
+}
+
 export default function ProductDetailPage() {
   const { id } = useParams();
   const router  = useRouter();
   const { addItem } = useCart();
 
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [qty, setQty] = useState(1);
+  const [product, setProduct]   = useState<Product | null>(null);
+  const [variants, setVariants] = useState<Variant[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [qty, setQty]           = useState(1);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [selectedSize, setSelectedSize]   = useState<string | null>(null);
+
+  const isNew = (createdAt: string) => {
+    const diff = Date.now() - new Date(createdAt).getTime();
+    return diff < 7 * 24 * 60 * 60 * 1000;
+  };
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const res = await api.get(`/api/products/${id}`);
-        setProduct(res.data);
+        const [prodRes, varRes] = await Promise.all([
+          api.get(`/api/products/${id}`),
+          api.get(`/api/products/${id}/variants`),
+        ]);
+        setProduct(prodRes.data);
+        setVariants(varRes.data);
       } catch {
         toast.error('Produit introuvable');
         router.push('/products');
@@ -43,7 +62,6 @@ export default function ProductDetailPage() {
             <div className="h-8 bg-gray-200 rounded w-3/4" />
             <div className="h-6 bg-gray-200 rounded w-1/4" />
             <div className="h-4 bg-gray-200 rounded w-full" />
-            <div className="h-4 bg-gray-200 rounded w-5/6" />
           </div>
         </div>
       </div>
@@ -52,14 +70,34 @@ export default function ProductDetailPage() {
 
   if (!product) return null;
 
+  const hasVariants = variants.length > 0;
+  const colors  = [...new Set(variants.filter(v => v.color).map(v => v.color as string))];
+  const sizes   = [...new Set(variants.filter(v => v.size).map(v => v.size as string))];
+
+  // Stock disponible selon sélection
+  const getVariantStock = () => {
+    if (!hasVariants) return product.stock_qty;
+    const match = variants.find(v =>
+      (colors.length === 0 || v.color === selectedColor) &&
+      (sizes.length  === 0 || v.size  === selectedSize)
+    );
+    return match ? match.stock_qty : 0;
+  };
+
+  const availableStock = getVariantStock();
+
   const handleAddToCart = () => {
+    if (hasVariants) {
+      if (colors.length > 0 && !selectedColor) return toast.error('Veuillez choisir une couleur');
+      if (sizes.length  > 0 && !selectedSize)  return toast.error('Veuillez choisir une taille');
+      if (availableStock === 0) return toast.error('Stock insuffisant pour cette variante');
+    }
     addItem(product, qty);
     toast.success(`${qty}x "${product.name}" ajouté au panier !`);
   };
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      {/* Retour */}
       <Link href="/products" className="inline-flex items-center gap-2 text-gray-500 hover:text-pink-600 mb-6 text-sm">
         <ArrowLeft size={16} /> Retour aux produits
       </Link>
@@ -68,13 +106,7 @@ export default function ProductDetailPage() {
         {/* Image */}
         <div className="relative h-96 md:h-[480px] bg-gray-100 rounded-2xl overflow-hidden">
           {product.image_url ? (
-            <Image
-              src={product.image_url}
-              alt={product.name}
-              fill
-              className="object-cover"
-              priority
-            />
+            <Image src={product.image_url} alt={product.name} fill className="object-cover" priority />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-400">
               <Package size={64} />
@@ -86,8 +118,15 @@ export default function ProductDetailPage() {
             {product.category_name}
           </span>
 
+          {/* Badge NOUVEAU */}
+          {product.created_at && isNew(product.created_at) && (
+            <span className="absolute top-3 right-3 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
+               Nouveau
+            </span>
+          )}
+
           {/* Rupture de stock */}
-          {product.stock_qty === 0 && (
+          {availableStock === 0 && !hasVariants && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
               <span className="bg-white text-gray-800 font-semibold px-4 py-2 rounded-lg text-sm">
                 Rupture de stock
@@ -110,37 +149,82 @@ export default function ProductDetailPage() {
             {product.price.toLocaleString('fr-DZ')} DA
           </div>
 
+          {/* Couleurs */}
+          {colors.length > 0 && (
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">
+                Couleur : {selectedColor && <span className="text-pink-600">{selectedColor}</span>}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {colors.map(color => (
+                  <button key={color} onClick={() => setSelectedColor(color)}
+                    className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-all
+                      ${selectedColor === color
+                        ? 'border-pink-600 bg-pink-50 text-pink-600'
+                        : 'border-gray-300 text-gray-600 hover:border-pink-400'}`}>
+                    {color}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Tailles / Pointures */}
+          {sizes.length > 0 && (
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">
+                {sizes[0]?.match(/^\d+$/) ? '👟 Pointure' : '📏 Taille'} :
+                {selectedSize && <span className="text-pink-600 ml-1">{selectedSize}</span>}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {sizes.map(size => {
+                  const variant = variants.find(v =>
+                    v.size === size &&
+                    (colors.length === 0 || v.color === selectedColor)
+                  );
+                  const inStock = variant ? variant.stock_qty > 0 : false;
+                  return (
+                    <button key={size} onClick={() => inStock && setSelectedSize(size)}
+                      disabled={!inStock}
+                      className={`w-12 h-12 rounded-lg border text-sm font-semibold transition-all
+                        ${selectedSize === size
+                          ? 'border-pink-600 bg-pink-50 text-pink-600'
+                          : inStock
+                            ? 'border-gray-300 text-gray-700 hover:border-pink-400'
+                            : 'border-gray-200 text-gray-300 line-through cursor-not-allowed'}`}>
+                      {size}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Stock indicator */}
           <div className="flex items-center gap-2 text-sm">
             <span className={`w-2 h-2 rounded-full ${
-              product.stock_qty === 0 ? 'bg-red-500' :
-              product.stock_qty < 5  ? 'bg-orange-400' : 'bg-green-500'
+              availableStock === 0 ? 'bg-red-500' :
+              availableStock < 5  ? 'bg-orange-400' : 'bg-green-500'
             }`} />
             <span className="text-gray-600">
-              {product.stock_qty === 0
+              {availableStock === 0
                 ? 'Rupture de stock'
-                : product.stock_qty < 5
-                  ? `Plus que ${product.stock_qty} en stock !`
+                : availableStock < 5
+                  ? `Plus que ${availableStock} en stock !`
                   : 'En stock'}
             </span>
           </div>
 
-          {/* Sélecteur quantité */}
-          {product.stock_qty > 0 && (
+          {/* Quantité */}
+          {availableStock > 0 && (
             <div className="flex items-center gap-4">
               <span className="text-sm font-medium text-gray-700">Quantité :</span>
               <div className="flex items-center gap-3 border rounded-lg px-3 py-2 w-fit">
-                <button
-                  onClick={() => setQty(q => Math.max(1, q - 1))}
-                  className="text-gray-500 hover:text-pink-600"
-                >
+                <button onClick={() => setQty(q => Math.max(1, q - 1))} className="text-gray-500 hover:text-pink-600">
                   <Minus size={16} />
                 </button>
                 <span className="w-8 text-center font-semibold">{qty}</span>
-                <button
-                  onClick={() => setQty(q => Math.min(product.stock_qty, q + 1))}
-                  className="text-gray-500 hover:text-pink-600"
-                >
+                <button onClick={() => setQty(q => Math.min(availableStock, q + 1))} className="text-gray-500 hover:text-pink-600">
                   <Plus size={16} />
                 </button>
               </div>
@@ -148,13 +232,10 @@ export default function ProductDetailPage() {
           )}
 
           {/* Bouton panier */}
-          <button
-            onClick={handleAddToCart}
-            disabled={product.stock_qty === 0}
-            className="btn-primary flex items-center justify-center gap-3 py-4 text-base"
-          >
+          <button onClick={handleAddToCart} disabled={availableStock === 0}
+            className="btn-primary flex items-center justify-center gap-3 py-4 text-base">
             <ShoppingCart size={20} />
-            {product.stock_qty === 0 ? 'Indisponible' : 'Ajouter au panier'}
+            {availableStock === 0 ? 'Indisponible' : 'Ajouter au panier'}
           </button>
 
           {/* Infos livraison */}
