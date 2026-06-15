@@ -209,8 +209,8 @@ export default function ProductDetailPage() {
             <span className="text-gray-600">
               {availableStock === 0
                 ? 'Rupture de stock'
-                : availableStock < 5
-                  ? `Plus que ${availableStock} en stock !`
+                : availableStock === 1
+                  ? 'Plus qu\'un seul en stock !'
                   : 'En stock'}
             </span>
           </div>
