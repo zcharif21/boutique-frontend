@@ -71,10 +71,10 @@ export default function ProductDetailPage() {
   if (!product) return null;
 
   const hasVariants = variants.length > 0;
-  const colors  = [...new Set(variants.filter(v => v.color).map(v => v.color as string))];
-  const sizes   = [...new Set(variants.filter(v => v.size).map(v => v.size as string))];
-
-  // Stock disponible selon sélection
+  const colors  = Array.from(new Set(variants.filter(v => v.color).map(v => v.color as string)));
+  const sizes   = Array.from(new Set(variants.filter(v => v.size).map(v => v.size as string)));
+  
+// Stock disponible selon sélection
   const getVariantStock = () => {
     if (!hasVariants) return product.stock_qty;
     const match = variants.find(v =>
