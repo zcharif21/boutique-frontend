@@ -24,7 +24,7 @@ export default function AdminPage() {
   const [tab, setTab] = useState<Tab>('products');
   const [products, setProducts]     = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [orders, setOrders]         = useState<Order[]>([]);
+  const [orders, setOrders]         = useState<any[]>([]);
   const [fetching, setFetching]     = useState(true);
 
   const [showForm, setShowForm]   = useState(false);
@@ -37,8 +37,8 @@ export default function AdminPage() {
   const fileRef     = useRef<HTMLInputElement>(null);
   const extraImgRef = useRef<HTMLInputElement>(null);
 
-  const [variants, setVariants]     = useState<any[]>([]);
-  const [newVariant, setNewVariant] = useState({ ...EMPTY_VARIANT });
+  const [variants, setVariants]       = useState<any[]>([]);
+  const [newVariant, setNewVariant]   = useState({ ...EMPTY_VARIANT });
   const [loadingVars, setLoadingVars] = useState(false);
 
   useEffect(() => {
@@ -255,7 +255,7 @@ export default function AdminPage() {
       </div>
 
       <div className="flex gap-2 mb-6 border-b">
-        {([['products','Produits & Stock',Package], ['orders','Commandes',ShoppingBag]] as const).map(([key, label, Icon]) => (
+        {([['products', 'Produits & Stock', Package], ['orders', 'Commandes', ShoppingBag]] as const).map(([key, label, Icon]) => (
           <button key={key} onClick={() => setTab(key)}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors
               ${tab === key ? 'border-pink-600 text-pink-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
@@ -264,6 +264,7 @@ export default function AdminPage() {
         ))}
       </div>
 
+      {/* ─── ONGLET PRODUITS ─── */}
       {tab === 'products' && (
         <>
           <div className="flex justify-end mb-4">
@@ -302,7 +303,6 @@ export default function AdminPage() {
                   </select>
                 </div>
 
-                {/* Photo principale */}
                 <div>
                   <label className="text-xs font-medium text-gray-600 mb-1 block">Photo principale</label>
                   <input type="file" accept="image/*" ref={fileRef}
@@ -480,6 +480,7 @@ export default function AdminPage() {
         </>
       )}
 
+      {/* ─── ONGLET COMMANDES ─── */}
       {tab === 'orders' && (
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
@@ -487,6 +488,7 @@ export default function AdminPage() {
               <tr>
                 <th className="px-4 py-3 text-left">#</th>
                 <th className="px-4 py-3 text-left">Client</th>
+                <th className="px-4 py-3 text-left">Articles</th>
                 <th className="px-4 py-3 text-left">Téléphone</th>
                 <th className="px-4 py-3 text-right">Total</th>
                 <th className="px-4 py-3 text-center">Statut</th>
@@ -498,6 +500,20 @@ export default function AdminPage() {
                 <tr key={o.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-mono text-gray-400">#{o.id}</td>
                   <td className="px-4 py-3 font-medium">{o.client_name || '—'}</td>
+                  <td className="px-4 py-3 text-xs text-gray-600">
+                    {o.items?.map((item: any, idx: number) => (
+                      <div key={idx} className="mb-0.5">
+                        <span className="font-medium text-gray-800">{item.name}</span>
+                        <span className="text-gray-500"> x{item.quantity}</span>
+                        {item.color && (
+                          <span className="ml-1 text-pink-500 font-medium">· {item.color}</span>
+                        )}
+                        {item.size && (
+                          <span className="ml-1 text-blue-500 font-medium">· {item.size}</span>
+                        )}
+                      </div>
+                    ))}
+                  </td>
                   <td className="px-4 py-3 text-gray-600">{o.phone || '—'}</td>
                   <td className="px-4 py-3 text-right font-bold text-pink-600">
                     {o.total.toLocaleString('fr-DZ')} DA
