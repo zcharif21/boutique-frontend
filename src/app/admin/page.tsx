@@ -332,8 +332,9 @@ export default function AdminPage() {
                       value={newVariant.color} onChange={e => setNewVariant(v => ({ ...v, color: e.target.value }))} />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Taille</label>
-                    <input className="input w-20 text-sm" placeholder="ex: 38"
+                    <label className="text-xs text-gray-500 mb-1 block">
+                      {newVariant.size && /^\d+$/.test(newVariant.size) ? '👟 Pointure' : '📏 Taille'} </label>
+                    <input className="input w-20 text-sm" placeholder="ex: 38 ou S/M/L"
                       value={newVariant.size} onChange={e => setNewVariant(v => ({ ...v, size: e.target.value }))} />
                   </div>
                   <div>
