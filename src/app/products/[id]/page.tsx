@@ -28,6 +28,8 @@ export default function ProductDetailPage() {
   const [qty, setQty]           = useState(1);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize]   = useState<string | null>(null);
+  const [extraImages, setExtraImages]     = useState<any[]>([]);
+  const [activeImage, setActiveImage]     = useState<string | null>(null);
 
   const isNew = (createdAt: string) => {
     const diff = Date.now() - new Date(createdAt).getTime();
@@ -37,12 +39,15 @@ export default function ProductDetailPage() {
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const [prodRes, varRes] = await Promise.all([
+        const [prodRes, varRes, imgRes] = await Promise.all([
           api.get(`/api/products/${id}`),
           api.get(`/api/products/${id}/variants`),
+          api.get(`/api/products/${id}/images`),
         ]);
         setProduct(prodRes.data);
         setVariants(varRes.data);
+        setExtraImages(imgRes.data);
+        setActiveImage(prodRes.data.image_url);
       } catch {
         toast.error('Produit introuvable');
         router.push('/products');
@@ -71,17 +76,17 @@ export default function ProductDetailPage() {
   if (!product) return null;
 
   const hasVariants = variants.length > 0;
-  const colors  = Array.from(new Set(variants.filter(v => v.color).map(v => v.color as string)));
-  const sizes   = Array.from(new Set(variants.filter(v => v.size).map(v => v.size as string)));
-  
-// Stock disponible selon sélection
+  const colors = Array.from(new Set(variants.filter(v => v.color).map(v => v.color as string)));
+  const sizes  = Array.from(new Set(variants.filter(v => v.size).map(v => v.size as string)));
+
   const getVariantStock = () => {
     if (!hasVariants) return product.stock_qty;
+    if (!selectedColor && !selectedSize) return product.stock_qty;
     const match = variants.find(v =>
-      (colors.length === 0 || v.color === selectedColor) &&
-      (sizes.length  === 0 || v.size  === selectedSize)
+      (!selectedColor || v.color === selectedColor) &&
+      (!selectedSize  || v.size  === selectedSize)
     );
-    return match ? match.stock_qty : 0;
+    return match ? match.stock_qty : product.stock_qty;
   };
 
   const availableStock = getVariantStock();
@@ -103,39 +108,59 @@ export default function ProductDetailPage() {
       </Link>
 
       <div className="grid md:grid-cols-2 gap-8">
-        {/* Image */}
-        <div className="relative h-96 md:h-[480px] bg-gray-100 rounded-2xl overflow-hidden">
-          {product.image_url ? (
-            <Image src={product.image_url} alt={product.name} fill className="object-cover" priority />
-          ) : (
-            <div className="flex items-center justify-center h-full text-gray-400">
-              <Package size={64} />
-            </div>
-          )}
 
-          {/* Badge catégorie */}
-          <span className="absolute top-3 left-3 bg-white text-pink-600 text-xs font-semibold px-3 py-1 rounded-full shadow">
-            {product.category_name}
-          </span>
+        {/* Colonne gauche : image + miniatures */}
+        <div className="flex flex-col gap-3">
+          <div className="relative h-96 md:h-[480px] bg-gray-100 rounded-2xl overflow-hidden">
+            {activeImage ? (
+              <Image src={activeImage} alt={product.name} fill className="object-cover" priority />
+            ) : (
+              <div className="flex items-center justify-center h-full text-gray-400">
+                <Package size={64} />
+              </div>
+            )}
 
-          {/* Badge NOUVEAU */}
-          {product.created_at && isNew(product.created_at) && (
-            <span className="absolute top-3 right-3 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
-               Nouveau
+            <span className="absolute top-3 left-3 bg-white text-pink-600 text-xs font-semibold px-3 py-1 rounded-full shadow">
+              {product.category_name}
             </span>
-          )}
 
-          {/* Rupture de stock */}
-          {availableStock === 0 && !hasVariants && (
-            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-              <span className="bg-white text-gray-800 font-semibold px-4 py-2 rounded-lg text-sm">
-                Rupture de stock
+            {product.created_at && isNew(product.created_at) && (
+              <span className="absolute top-3 right-3 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
+                ✨ Nouveau
               </span>
+            )}
+
+            {availableStock === 0 && !hasVariants && (
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                <span className="bg-white text-gray-800 font-semibold px-4 py-2 rounded-lg text-sm">
+                  Rupture de stock
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Miniatures */}
+          {extraImages.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              <button onClick={() => setActiveImage(product.image_url ?? null)}
+                className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all
+                  ${activeImage === product.image_url ? 'border-pink-600' : 'border-gray-200'}`}>
+                {product.image_url && (
+                  <Image src={product.image_url} alt="main" width={64} height={64} className="object-cover w-full h-full" />
+                )}
+              </button>
+              {extraImages.map(img => (
+                <button key={img.id} onClick={() => setActiveImage(img.image_url)}
+                  className={`w-16 h-16 rounded-lg overflow-hidden border-2 transition-all
+                    ${activeImage === img.image_url ? 'border-pink-600' : 'border-gray-200'}`}>
+                  <Image src={img.image_url} alt="photo" width={64} height={64} className="object-cover w-full h-full" />
+                </button>
+              ))}
             </div>
           )}
         </div>
 
-        {/* Infos */}
+        {/* Colonne droite : infos */}
         <div className="flex flex-col justify-center space-y-5">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{product.name}</h1>
@@ -144,7 +169,6 @@ export default function ProductDetailPage() {
             )}
           </div>
 
-          {/* Prix */}
           <div className="text-3xl font-bold text-pink-600">
             {product.price.toLocaleString('fr-DZ')} DA
           </div>
@@ -204,7 +228,7 @@ export default function ProductDetailPage() {
           <div className="flex items-center gap-2 text-sm">
             <span className={`w-2 h-2 rounded-full ${
               availableStock === 0 ? 'bg-red-500' :
-              availableStock < 5  ? 'bg-orange-400' : 'bg-green-500'
+              availableStock === 1 ? 'bg-orange-400' : 'bg-green-500'
             }`} />
             <span className="text-gray-600">
               {availableStock === 0
@@ -238,7 +262,6 @@ export default function ProductDetailPage() {
             {availableStock === 0 ? 'Indisponible' : 'Ajouter au panier'}
           </button>
 
-          {/* Infos livraison */}
           <div className="border-t pt-4 text-sm text-gray-500 space-y-1">
             <p>🚚 Livraison partout en Algérie</p>
             <p>💳 Paiement à la livraison</p>
