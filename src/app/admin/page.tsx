@@ -31,13 +31,15 @@ export default function AdminPage() {
   const [editing, setEditing]     = useState<Product | null>(null);
   const [form, setForm]           = useState({ ...EMPTY_FORM });
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [productImages, setProductImages] = useState<any[]>([]);
+  const [uploadingImg, setUploadingImg]   = useState(false);
   const [saving, setSaving]       = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  const fileRef     = useRef<HTMLInputElement>(null);
+  const extraImgRef = useRef<HTMLInputElement>(null);
 
-  // Variantes
-  const [variants, setVariants]         = useState<any[]>([]);
-  const [newVariant, setNewVariant]     = useState({ ...EMPTY_VARIANT });
-  const [loadingVars, setLoadingVars]   = useState(false);
+  const [variants, setVariants]     = useState<any[]>([]);
+  const [newVariant, setNewVariant] = useState({ ...EMPTY_VARIANT });
+  const [loadingVars, setLoadingVars] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) router.push('/auth/login');
@@ -66,6 +68,7 @@ export default function AdminPage() {
     setEditing(null);
     setForm({ ...EMPTY_FORM });
     setVariants([]);
+    setProductImages([]);
     setNewVariant({ ...EMPTY_VARIANT });
     setShowForm(true);
   };
@@ -79,6 +82,7 @@ export default function AdminPage() {
     });
     setNewVariant({ ...EMPTY_VARIANT });
     loadVariants(p.id);
+    loadProductImages(p.id);
     setShowForm(true);
   };
 
@@ -89,6 +93,38 @@ export default function AdminPage() {
       setVariants(res.data);
     } catch { setVariants([]); }
     finally { setLoadingVars(false); }
+  };
+
+  const loadProductImages = async (productId: number) => {
+    try {
+      const res = await api.get(`/api/products/${productId}/images`);
+      setProductImages(res.data);
+    } catch { setProductImages([]); }
+  };
+
+  const handleUploadExtraImage = async (file: File) => {
+    if (!editing) return toast.error('Sauvegardez le produit d\'abord');
+    if (productImages.length >= 4) return toast.error('Maximum 4 photos supplémentaires');
+    setUploadingImg(true);
+    try {
+      const fd = new FormData();
+      fd.append('image', file);
+      fd.append('position', String(productImages.length));
+      const res = await api.post(`/api/products/${editing.id}/images`, fd, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setProductImages(prev => [...prev, res.data]);
+      toast.success('Photo ajoutée');
+    } catch { toast.error('Erreur upload'); }
+    finally { setUploadingImg(false); }
+  };
+
+  const handleDeleteExtraImage = async (imgId: number) => {
+    try {
+      await api.delete(`/api/products/images/${imgId}`);
+      setProductImages(prev => prev.filter(i => i.id !== imgId));
+      toast.success('Photo supprimée');
+    } catch { toast.error('Erreur suppression'); }
   };
 
   const handleSave = async () => {
@@ -110,7 +146,6 @@ export default function AdminPage() {
         toast.success('Produit ajouté');
       }
 
-      // Sauvegarder les variantes en attente (pour nouveau produit)
       if (!editing && variants.length > 0) {
         const pid = savedProduct.id || savedProduct.product?.id;
         if (pid) {
@@ -131,7 +166,6 @@ export default function AdminPage() {
     if (newVariant.stock_qty === '') return toast.error('Stock requis');
 
     if (editing) {
-      // Produit existant → sauvegarder directement
       try {
         const res = await api.post(`/api/products/${editing.id}/variants`, {
           size: newVariant.size || null,
@@ -143,7 +177,6 @@ export default function AdminPage() {
         toast.success('Variante ajoutée');
       } catch { toast.error('Erreur ajout variante'); }
     } else {
-      // Nouveau produit → stocker localement
       setVariants(prev => [...prev, { ...newVariant, stock_qty: parseInt(newVariant.stock_qty), id: Date.now() }]);
       setNewVariant({ ...EMPTY_VARIANT });
     }
@@ -204,7 +237,6 @@ export default function AdminPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
 
-      {/* En-tête */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Administration</h1>
@@ -222,7 +254,6 @@ export default function AdminPage() {
         </div>
       </div>
 
-      {/* Onglets */}
       <div className="flex gap-2 mb-6 border-b">
         {([['products','Produits & Stock',Package], ['orders','Commandes',ShoppingBag]] as const).map(([key, label, Icon]) => (
           <button key={key} onClick={() => setTab(key)}
@@ -233,7 +264,6 @@ export default function AdminPage() {
         ))}
       </div>
 
-      {/* ─── TAB PRODUITS ─── */}
       {tab === 'products' && (
         <>
           <div className="flex justify-end mb-4">
@@ -242,7 +272,6 @@ export default function AdminPage() {
             </button>
           </div>
 
-          {/* Formulaire */}
           {showForm && (
             <div className="card p-6 mb-6 border-pink-200 border">
               <div className="flex items-center justify-between mb-4">
@@ -252,7 +281,6 @@ export default function AdminPage() {
                 <button onClick={() => setShowForm(false)}><X size={20} className="text-gray-500" /></button>
               </div>
 
-              {/* Champs produit */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                 <div className="col-span-2 md:col-span-1">
                   <label className="text-xs font-medium text-gray-600 mb-1 block">Nom *</label>
@@ -273,24 +301,56 @@ export default function AdminPage() {
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
+
+                {/* Photo principale */}
                 <div>
-                  <label className="text-xs font-medium text-gray-600 mb-1 block">Photo</label>
+                  <label className="text-xs font-medium text-gray-600 mb-1 block">Photo principale</label>
                   <input type="file" accept="image/*" ref={fileRef}
                     onChange={e => setImageFile(e.target.files?.[0] || null)}
                     className="text-sm text-gray-600 w-full" />
                 </div>
+
                 <div className="col-span-2 md:col-span-3">
                   <label className="text-xs font-medium text-gray-600 mb-1 block">Description</label>
                   <textarea className="input resize-none" rows={2}
                     value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
                 </div>
+
+                {/* Photos supplémentaires — seulement en mode édition */}
+                {editing && (
+                  <div className="col-span-2 md:col-span-3 border-t pt-4">
+                    <label className="text-xs font-medium text-gray-600 mb-2 block">
+                      Photos supplémentaires ({productImages.length}/4)
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {productImages.map(img => (
+                        <div key={img.id} className="relative w-16 h-16 rounded-lg overflow-hidden border">
+                          <Image src={img.image_url} alt="photo" width={64} height={64} className="object-cover w-full h-full" />
+                          <button onClick={() => handleDeleteExtraImage(img.id)}
+                            className="absolute top-0 right-0 bg-red-500 text-white rounded-bl p-0.5">
+                            <X size={10} />
+                          </button>
+                        </div>
+                      ))}
+                      {productImages.length < 4 && (
+                        <label className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-pink-400">
+                          {uploadingImg
+                            ? <span className="text-xs text-gray-400">...</span>
+                            : <Plus size={20} className="text-gray-400" />
+                          }
+                          <input type="file" accept="image/*" className="hidden" ref={extraImgRef}
+                            onChange={e => e.target.files?.[0] && handleUploadExtraImage(e.target.files[0])} />
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Section Variantes */}
               <div className="border-t pt-4">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">Tailles & Couleurs (variantes)</h3>
 
-                {/* Liste variantes existantes */}
                 {loadingVars ? (
                   <p className="text-xs text-gray-400 mb-3">Chargement variantes...</p>
                 ) : variants.length > 0 ? (
@@ -324,7 +384,6 @@ export default function AdminPage() {
                   <p className="text-xs text-gray-400 mb-3">Aucune variante — le stock général sera utilisé.</p>
                 )}
 
-                {/* Ajouter une variante */}
                 <div className="flex flex-wrap gap-2 items-end">
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">Couleur</label>
@@ -333,7 +392,8 @@ export default function AdminPage() {
                   </div>
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">
-                      {newVariant.size && /^\d+$/.test(newVariant.size) ? '👟 Pointure' : '📏 Taille'} </label>
+                      {newVariant.size && /^\d+$/.test(newVariant.size) ? '👟 Pointure' : '📏 Taille'}
+                    </label>
                     <input className="input w-20 text-sm" placeholder="ex: 38 ou S/M/L"
                       value={newVariant.size} onChange={e => setNewVariant(v => ({ ...v, size: e.target.value }))} />
                   </div>
@@ -358,7 +418,6 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* Tableau produits */}
           <div className="card overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
@@ -421,7 +480,6 @@ export default function AdminPage() {
         </>
       )}
 
-      {/* ─── TAB COMMANDES ─── */}
       {tab === 'orders' && (
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
