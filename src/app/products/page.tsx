@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Search, ShoppingCart, Package } from 'lucide-react';
 import api from '@/lib/api';
 import { useCart } from '@/context/CartContext';
@@ -66,6 +67,7 @@ function ProductsContent() {
           <button type="submit" className="btn-primary px-3"><Search size={18} /></button>
         </form>
       </div>
+
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {Array.from({ length: 8 }).map((_, i) => (
@@ -87,21 +89,27 @@ function ProductsContent() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {products.map(product => (
             <div key={product.id} className="card group hover:shadow-md transition-shadow">
-              <div className="relative h-56 bg-gray-100 overflow-hidden">
-                {product.image_url ? (
-                  <Image src={product.image_url} alt={product.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
-                ) : (
-                  <div className="flex items-center justify-center h-full text-gray-400"><Package size={40} /></div>
-                )}
-                {product.stock_qty === 0 && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                    <span className="bg-white text-gray-700 text-xs font-semibold px-2 py-1 rounded">Rupture de stock</span>
-                  </div>
-                )}
-                <span className="absolute top-2 left-2 bg-white text-pink-600 text-xs font-medium px-2 py-0.5 rounded-full shadow-sm">{product.category_name}</span>
-              </div>
-              <div className="p-3">
-                <h3 className="font-medium text-gray-800 text-sm leading-tight line-clamp-2 mb-2">{product.name}</h3>
+              <Link href={`/products/${product.id}`} className="block">
+                <div className="relative h-56 bg-gray-100 overflow-hidden">
+                  {product.image_url ? (
+                    <Image src={product.image_url} alt={product.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-gray-400"><Package size={40} /></div>
+                  )}
+                  {product.stock_qty === 0 && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <span className="bg-white text-gray-700 text-xs font-semibold px-2 py-1 rounded">Rupture de stock</span>
+                    </div>
+                  )}
+                  <span className="absolute top-2 left-2 bg-white text-pink-600 text-xs font-medium px-2 py-0.5 rounded-full shadow-sm">
+                    {product.category_name}
+                  </span>
+                </div>
+                <div className="p-3 pb-0">
+                  <h3 className="font-medium text-gray-800 text-sm leading-tight line-clamp-2 mb-2">{product.name}</h3>
+                </div>
+              </Link>
+              <div className="p-3 pt-1">
                 <div className="flex items-center justify-between">
                   <span className="text-pink-600 font-bold">{product.price.toLocaleString('fr-DZ')} DA</span>
                   <button onClick={() => { addItem(product); toast.success('Ajouté au panier !'); }}
