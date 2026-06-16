@@ -132,7 +132,7 @@ export default function ProductDetailPage() {
 
             {product.created_at && isNew(product.created_at) && (
               <span className="absolute top-3 right-3 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow">
-                ✨ Nouveau
+                Nouveau
               </span>
             )}
 
