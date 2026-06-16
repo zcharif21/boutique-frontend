@@ -100,7 +100,7 @@ export default function CartPage() {
                       <Minus size={12} />
                     </button>
                     <span className="w-8 text-center text-sm font-medium">{quantity}</span>
-                    <button onClick={() => updateQty(product.id, Math.min(quantity + 1, product.stock_qty), item.selectedColor, item.selectedSize)}
+                    <button onClick={() => updateQty(product.id, quantity + 1, item.selectedColor, item.selectedSize)}
                       className="w-7 h-7 border rounded-full flex items-center justify-center hover:bg-gray-100">
                       <Plus size={12} />
                     </button>
