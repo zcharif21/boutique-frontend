@@ -104,6 +104,11 @@ function ProductsContent() {
                   <span className="absolute top-2 left-2 bg-white text-pink-600 text-xs font-medium px-2 py-0.5 rounded-full shadow-sm">
                     {product.category_name}
                   </span>
+                  {product.created_at && (Date.now() - new Date(product.created_at).getTime() < 7 * 24 * 60 * 60 * 1000) && (
+                    <span className="absolute top-2 right-2 bg-green-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
+                      Nouveau
+                    </span>
+                  )}
                 </div>
                 <div className="p-3 pb-0">
                   <h3 className="font-medium text-gray-800 text-sm leading-tight line-clamp-2 mb-2">{product.name}</h3>
