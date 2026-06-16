@@ -117,11 +117,10 @@ function ProductsContent() {
               <div className="p-3 pt-1">
                 <div className="flex items-center justify-between">
                   <span className="text-pink-600 font-bold">{product.price.toLocaleString('fr-DZ')} DA</span>
-                  <button onClick={() => { addItem(product); toast.success('Ajouté au panier !'); }}
-                    disabled={product.stock_qty === 0}
+                  <Link href={`/products/${product.id}`}
                     className="btn-primary px-3 py-1.5 text-xs flex items-center gap-1">
                     <ShoppingCart size={14} /> Ajouter
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>
