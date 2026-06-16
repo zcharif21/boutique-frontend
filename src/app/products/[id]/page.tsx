@@ -211,7 +211,7 @@ export default function ProductDetailPage() {
                 {sizes.map(size => {
                   const variant = variants.find(v =>
                     v.size === size &&
-                    (colors.length === 0 || v.color === selectedColor)
+                    (colors.length === 0 || !selectedColor || v.color === selectedColor)
                   );
                   const inStock = variant ? variant.stock_qty > 0 : false;
                   return (
