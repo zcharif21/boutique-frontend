@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import { Trash2, Plus, Minus, ShoppingCart, Package } from 'lucide-react';
+import { Trash2, Plus, Minus, ShoppingCart, Package, Phone } from 'lucide-react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
@@ -17,6 +17,20 @@ export default function CartPage() {
 
   const [form, setForm] = useState({ address: '', phone: '', notes: '' });
   const [ordering, setOrdering] = useState(false);
+  const [phoneError, setPhoneError] = useState('');
+
+  const validatePhone = (phone: string) => {
+    const cleaned = phone.replace(/\s/g, '');
+    if (!cleaned) return 'Téléphone requis';
+    if (!/^(05|06|07)\d{8}$/.test(cleaned)) return 'Numéro invalide (ex: 0555123456)';
+    return '';
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 10);
+    setForm(f => ({ ...f, phone: val }));
+    setPhoneError(validatePhone(val));
+  };
 
   const handleOrder = async () => {
     if (!user) {
@@ -24,8 +38,14 @@ export default function CartPage() {
       router.push('/auth/login');
       return;
     }
-    if (!form.address || !form.phone) {
-      toast.error('Adresse et téléphone requis');
+    if (!form.address) {
+      toast.error('Adresse requise');
+      return;
+    }
+    const err = validatePhone(form.phone);
+    if (err) {
+      setPhoneError(err);
+      toast.error(err);
       return;
     }
     try {
@@ -126,8 +146,27 @@ export default function CartPage() {
             <div className="space-y-3">
               <input className="input" placeholder="Adresse complète *"
                 value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} />
-              <input className="input" placeholder="Téléphone *"
-                value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+
+              <div>
+                <div className="relative">
+                  <Phone size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    className={`input pl-9 ${phoneError ? 'border-red-400 focus:ring-red-300' : form.phone.length === 10 ? 'border-green-400' : ''}`}
+                    placeholder="Téléphone * (ex: 0555123456)"
+                    value={form.phone}
+                    onChange={handlePhoneChange}
+                    maxLength={10}
+                    inputMode="numeric"
+                  />
+                </div>
+                {phoneError && (
+                  <p className="text-red-500 text-xs mt-1">⚠ {phoneError}</p>
+                )}
+                {!phoneError && form.phone.length === 10 && (
+                  <p className="text-green-500 text-xs mt-1">✓ Numéro valide</p>
+                )}
+              </div>
+
               <textarea className="input resize-none" rows={2} placeholder="Notes (optionnel)"
                 value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} />
             </div>
