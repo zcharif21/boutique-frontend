@@ -79,14 +79,20 @@ export default function ProductDetailPage() {
   const colors = Array.from(new Set(variants.filter(v => v.color).map(v => v.color as string)));
   const sizes  = Array.from(new Set(variants.filter(v => v.size).map(v => v.size as string)));
 
+  // Stock total de toutes les variantes (pour affichage par défaut)
+  const totalVariantStock = hasVariants
+    ? variants.reduce((sum, v) => sum + v.stock_qty, 0)
+    : product.stock_qty;
+
   const getVariantStock = () => {
     if (!hasVariants) return product.stock_qty;
-    if (!selectedColor && !selectedSize) return product.stock_qty;
+    // Aucune sélection → on retourne le stock total des variantes
+    if (!selectedColor && !selectedSize) return totalVariantStock;
     const match = variants.find(v =>
       (!selectedColor || v.color === selectedColor) &&
       (!selectedSize  || v.size  === selectedSize)
     );
-    return match ? match.stock_qty : product.stock_qty;
+    return match ? match.stock_qty : totalVariantStock;
   };
 
   const availableStock = getVariantStock();
@@ -130,7 +136,8 @@ export default function ProductDetailPage() {
               </span>
             )}
 
-            {availableStock === 0 && !hasVariants && (
+            {/* Rupture seulement si stock total = 0 */}
+            {totalVariantStock === 0 && (
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                 <span className="bg-white text-gray-800 font-semibold px-4 py-2 rounded-lg text-sm">
                   Rupture de stock
@@ -181,7 +188,7 @@ export default function ProductDetailPage() {
               </p>
               <div className="flex flex-wrap gap-2">
                 {colors.map(color => (
-                  <button key={color} onClick={() => setSelectedColor(color)}
+                  <button key={color} onClick={() => { setSelectedColor(color); setSelectedSize(null); }}
                     className={`px-3 py-1.5 rounded-full border text-sm font-medium transition-all
                       ${selectedColor === color
                         ? 'border-pink-600 bg-pink-50 text-pink-600'
@@ -234,7 +241,7 @@ export default function ProductDetailPage() {
               {availableStock === 0
                 ? 'Rupture de stock'
                 : availableStock === 1
-                  ? 'Plus qu\'un seul en stock !'
+                  ? "Plus qu'un seul en stock !"
                   : 'En stock'}
             </span>
           </div>
@@ -256,10 +263,10 @@ export default function ProductDetailPage() {
           )}
 
           {/* Bouton panier */}
-          <button onClick={handleAddToCart} disabled={availableStock === 0}
+          <button onClick={handleAddToCart} disabled={totalVariantStock === 0}
             className="btn-primary flex items-center justify-center gap-3 py-4 text-base">
             <ShoppingCart size={20} />
-            {availableStock === 0 ? 'Indisponible' : 'Ajouter au panier'}
+            {totalVariantStock === 0 ? 'Indisponible' : 'Ajouter au panier'}
           </button>
 
           <div className="border-t pt-4 text-sm text-gray-500 space-y-1">
