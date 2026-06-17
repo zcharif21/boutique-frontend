@@ -66,7 +66,7 @@ export default function Navbar() {
                   Mes commandes
                 </Link>
               )}
-              <span className="text-sm text-gray-500">{user.name}</span>
+              <Link href="/profile" className="text-sm text-gray-500 hover:text-pink-600">{user.name}</Link>
               <button onClick={logout} className="p-2 hover:bg-gray-100 rounded-lg" title="Déconnexion">
                 <LogOut size={20} className="text-gray-600" />
               </button>
