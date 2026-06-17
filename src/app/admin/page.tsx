@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { Plus, Pencil, Trash2, Package, Save, X, ShoppingBag, Eye, MapPin, Phone, FileText } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, Save, X, ShoppingBag, Eye, MapPin, Phone, FileText, Users, Key, Search, Copy } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { Product, Category } from '@/types';
 import toast from 'react-hot-toast';
 
-type Tab = 'products' | 'orders';
+type Tab = 'products' | 'orders' | 'users';
 
 const EMPTY_FORM = {
   name: '', description: '', price: '', stock_qty: '0', category_id: '', is_active: true,
@@ -57,6 +57,11 @@ export default function AdminPage() {
 
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
 
+  const [users, setUsers]             = useState<any[]>([]);
+  const [userSearch, setUserSearch]   = useState('');
+  const [resettingId, setResettingId] = useState<number | null>(null);
+  const [resetResult, setResetResult] = useState<{ name: string; password: string } | null>(null);
+
   useEffect(() => {
     if (!loading && (!user || !isAdmin)) router.push('/auth/login');
   }, [user, isAdmin, loading]);
@@ -68,14 +73,16 @@ export default function AdminPage() {
   const fetchAll = async () => {
     setFetching(true);
     try {
-      const [p, c, o] = await Promise.all([
+      const [p, c, o, u] = await Promise.all([
         api.get('/api/products?limit=100'),
         api.get('/api/categories'),
         api.get('/api/orders'),
+        api.get('/api/users'),
       ]);
       setProducts(p.data.products);
       setCategories(c.data);
       setOrders(o.data);
+      setUsers(u.data);
     } catch { toast.error('Erreur chargement'); }
     finally { setFetching(false); }
   };
@@ -241,8 +248,24 @@ export default function AdminPage() {
     } catch { toast.error('Erreur'); }
   };
 
+  const handleResetPassword = async (id: number, name: string) => {
+    if (!confirm(`Réinitialiser le mot de passe de ${name} ?`)) return;
+    setResettingId(id);
+    try {
+      const res = await api.put(`/api/users/${id}/reset-password`);
+      setResetResult({ name: res.data.user.name, password: res.data.newPassword });
+      toast.success('Nouveau mot de passe généré');
+    } catch { toast.error('Erreur lors de la réinitialisation'); }
+    finally { setResettingId(null); }
+  };
+
   const isNew = (createdAt: string) =>
     Date.now() - new Date(createdAt).getTime() < 7 * 24 * 60 * 60 * 1000;
+
+  const filteredUsers = users.filter(u =>
+    u.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
+    u.email?.toLowerCase().includes(userSearch.toLowerCase())
+  );
 
   if (loading || fetching) {
     return <div className="flex items-center justify-center min-h-screen text-gray-400">Chargement...</div>;
@@ -376,11 +399,15 @@ export default function AdminPage() {
             <div className="font-bold text-blue-600 text-lg">{orders.length}</div>
             <div className="text-gray-500 text-xs">Commandes</div>
           </div>
+          <div className="card px-4 py-2 text-center">
+            <div className="font-bold text-purple-600 text-lg">{users.length}</div>
+            <div className="text-gray-500 text-xs">Utilisateurs</div>
+          </div>
         </div>
       </div>
 
       <div className="flex gap-2 mb-6 border-b">
-        {([['products', 'Produits & Stock', Package], ['orders', 'Commandes', ShoppingBag]] as const).map(([key, label, Icon]) => (
+        {([['products', 'Produits & Stock', Package], ['orders', 'Commandes', ShoppingBag], ['users', 'Utilisateurs', Users]] as const).map(([key, label, Icon]) => (
           <button key={key} onClick={() => setTab(key)}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors
               ${tab === key ? 'border-pink-600 text-pink-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
@@ -647,6 +674,82 @@ export default function AdminPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* ─── ONGLET UTILISATEURS ─── */}
+      {tab === 'users' && (
+        <>
+          {resetResult && (
+            <div className="card p-4 mb-4 bg-green-50 border border-green-200 flex items-center justify-between gap-3">
+              <div className="text-sm text-green-800">
+                Nouveau mot de passe pour <span className="font-semibold">{resetResult.name}</span> :{' '}
+                <span className="font-mono font-bold">{resetResult.password}</span>
+                <div className="text-xs text-green-600 mt-1">
+                  Copie-le et envoie-le au client (WhatsApp/Insta) — il ne sera plus affiché après.
+                </div>
+              </div>
+              <button
+                onClick={() => { navigator.clipboard.writeText(resetResult.password); toast.success('Copié !'); }}
+                className="p-2 hover:bg-green-100 rounded-lg text-green-700 shrink-0">
+                <Copy size={18} />
+              </button>
+            </div>
+          )}
+
+          <div className="flex justify-end mb-4">
+            <div className="relative max-w-sm w-full">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                className="input pl-9"
+                placeholder="Chercher par nom ou email..."
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div className="card overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
+                <tr>
+                  <th className="px-4 py-3 text-left">Nom</th>
+                  <th className="px-4 py-3 text-left">Email</th>
+                  <th className="px-4 py-3 text-center">Rôle</th>
+                  <th className="px-4 py-3 text-center">Inscrit le</th>
+                  <th className="px-4 py-3 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {filteredUsers.map(u => (
+                  <tr key={u.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium">{u.name}</td>
+                    <td className="px-4 py-3 text-gray-600">{u.email}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${u.role === 'admin' ? 'bg-pink-100 text-pink-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {u.role}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center text-gray-400 text-xs">
+                      {new Date(u.created_at).toLocaleDateString('fr-FR')}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <button
+                        onClick={() => handleResetPassword(u.id, u.name)}
+                        disabled={resettingId === u.id}
+                        className="btn-secondary text-xs flex items-center gap-1 mx-auto disabled:opacity-50">
+                        <Key size={14} />
+                        {resettingId === u.id ? '...' : 'Réinitialiser'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {filteredUsers.length === 0 && (
+              <div className="p-8 text-center text-gray-400 text-sm">Aucun utilisateur trouvé</div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
