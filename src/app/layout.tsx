@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
+import { ThemeProvider } from '@/context/ThemeContext';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import './globals.css';
@@ -16,18 +17,20 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr">
+    <html lang="fr" suppressHydrationWarning>
       <body className={inter.className}>
-        <AuthProvider>
-          <CartProvider>
-            <Navbar />
-            <main className="min-h-screen bg-gray-50">
-              {children}
-            </main>
-            <Footer />
-            <Toaster position="top-right" />
-          </CartProvider>
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <CartProvider>
+              <Navbar />
+              <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
+                {children}
+              </main>
+              <Footer />
+              <Toaster position="top-right" />
+            </CartProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
