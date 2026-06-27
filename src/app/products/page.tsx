@@ -7,10 +7,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Search, ShoppingCart, Package } from 'lucide-react';
 import api from '@/lib/api';
-import { useCart } from '@/context/CartContext';
 import { useLang } from '@/context/LanguageContext';
 import { Product } from '@/types';
-import toast from 'react-hot-toast';
 
 const CATEGORIES = [
   { fr: 'Tous',       ar: 'الكل',      slug: '' },
@@ -22,7 +20,6 @@ const CATEGORIES = [
 
 function ProductsContent() {
   const searchParams = useSearchParams();
-  const { addItem } = useCart();
   const { t, lang } = useLang();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -38,7 +35,6 @@ function ProductsContent() {
       const res = await api.get('/api/products', { params });
       setProducts(res.data.products);
     } catch {
-      toast.error('Erreur lors du chargement des produits');
     } finally {
       setLoading(false);
     }
@@ -124,11 +120,10 @@ function ProductsContent() {
               <div className="p-3 pt-1">
                 <div className="flex items-center justify-between">
                   <span className="text-pink-600 font-bold">{product.price.toLocaleString('fr-DZ')} DA</span>
-                  <button onClick={() => { addItem(product); toast.success(lang === 'ar' ? 'أضيف إلى السلة !' : 'Ajouté au panier !'); }}
-                    disabled={product.stock_qty === 0}
+                  <Link href={`/products/${product.id}`}
                     className="btn-primary px-3 py-1.5 text-xs flex items-center gap-1">
                     <ShoppingCart size={14} /> {t('addToCart')}
-                  </button>
+                  </Link>
                 </div>
               </div>
             </div>
