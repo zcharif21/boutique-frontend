@@ -127,7 +127,7 @@ export default function AdminPage() {
 
   const handleUploadExtraImage = async (file: File) => {
     if (!editing) return toast.error("Sauvegardez le produit d'abord");
-    if (productImages.length >= 4) return toast.error('Maximum 4 photos supplémentaires');
+    if (productImages.length >= 20) return toast.error('Maximum 20 photos supplémentaires');
     setUploadingImg(true);
     try {
       const fd = new FormData();
@@ -274,7 +274,6 @@ export default function AdminPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
 
-      {/* ─── MODAL DÉTAIL COMMANDE ─── */}
       {selectedOrder && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -289,9 +288,7 @@ export default function AdminPage() {
                 <X size={20} className="text-gray-500" />
               </button>
             </div>
-
             <div className="p-5 space-y-5">
-              {/* Infos client */}
               <div className="bg-gray-50 rounded-xl p-4 space-y-2">
                 <h3 className="font-semibold text-gray-700 text-sm mb-3">👤 Client</h3>
                 <p className="font-medium text-gray-800">{selectedOrder.client_name || '—'}</p>
@@ -311,8 +308,6 @@ export default function AdminPage() {
                   </p>
                 )}
               </div>
-
-              {/* Articles */}
               <div>
                 <h3 className="font-semibold text-gray-700 text-sm mb-3">🛍️ Articles commandés</h3>
                 <div className="space-y-3">
@@ -353,8 +348,6 @@ export default function AdminPage() {
                   )}
                 </div>
               </div>
-
-              {/* Total + statut */}
               <div className="flex items-center justify-between border-t pt-4">
                 <div>
                   <p className="text-xs text-gray-500">Total commande</p>
@@ -373,7 +366,6 @@ export default function AdminPage() {
                   </select>
                 </div>
               </div>
-
               <p className="text-xs text-gray-400 text-center">
                 Passée le {new Date(selectedOrder.created_at).toLocaleDateString('fr-FR', {
                   day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
@@ -384,7 +376,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ─── EN-TÊTE ─── */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Administration</h1>
@@ -416,7 +407,6 @@ export default function AdminPage() {
         ))}
       </div>
 
-      {/* ─── ONGLET PRODUITS ─── */}
       {tab === 'products' && (
         <>
           <div className="flex justify-end mb-4">
@@ -467,7 +457,7 @@ export default function AdminPage() {
                 {editing && (
                   <div className="col-span-2 md:col-span-3 border-t pt-4">
                     <label className="text-xs font-medium text-gray-600 mb-2 block">
-                      Photos supplémentaires ({productImages.length}/4)
+                      Photos supplémentaires ({productImages.length}/20)
                     </label>
                     <div className="flex flex-wrap gap-2">
                       {productImages.map(img => (
@@ -479,7 +469,7 @@ export default function AdminPage() {
                           </button>
                         </div>
                       ))}
-                      {productImages.length < 4 && (
+                      {productImages.length < 20 && (
                         <label className="w-16 h-16 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center cursor-pointer hover:border-pink-400">
                           {uploadingImg ? <span className="text-xs text-gray-400">...</span> : <Plus size={20} className="text-gray-400" />}
                           <input type="file" accept="image/*" className="hidden" ref={extraImgRef}
@@ -491,7 +481,6 @@ export default function AdminPage() {
                 )}
               </div>
 
-              {/* Variantes */}
               <div className="border-t pt-4">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">Tailles & Couleurs (variantes)</h3>
                 {loadingVars ? (
@@ -620,7 +609,6 @@ export default function AdminPage() {
         </>
       )}
 
-      {/* ─── ONGLET COMMANDES ─── */}
       {tab === 'orders' && (
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
@@ -676,7 +664,6 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* ─── ONGLET UTILISATEURS ─── */}
       {tab === 'users' && (
         <>
           {resetResult && (
@@ -699,12 +686,8 @@ export default function AdminPage() {
           <div className="flex justify-end mb-4">
             <div className="relative max-w-sm w-full">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                className="input pl-9"
-                placeholder="Chercher par nom ou email..."
-                value={userSearch}
-                onChange={e => setUserSearch(e.target.value)}
-              />
+              <input className="input pl-9" placeholder="Chercher par nom ou email..."
+                value={userSearch} onChange={e => setUserSearch(e.target.value)} />
             </div>
           </div>
 
@@ -733,8 +716,7 @@ export default function AdminPage() {
                       {new Date(u.created_at).toLocaleDateString('fr-FR')}
                     </td>
                     <td className="px-4 py-3 text-center">
-                      <button
-                        onClick={() => handleResetPassword(u.id, u.name)}
+                      <button onClick={() => handleResetPassword(u.id, u.name)}
                         disabled={resettingId === u.id}
                         className="btn-secondary text-xs flex items-center gap-1 mx-auto disabled:opacity-50">
                         <Key size={14} />
