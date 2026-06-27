@@ -14,10 +14,10 @@ export default function HomePage() {
   const { t, lang } = useLang();
 
   const FEATURES = [
-    { icon: Truck,       title: lang === 'ar' ? 'توصيل عبر الجزائر'  : 'Livraison Algérie',  desc: lang === 'ar' ? 'تغطية الولايات الرئيسية' : 'Wilayat principales couvertes' },
-    { icon: Shield,      title: lang === 'ar' ? 'دفع آمن'             : 'Paiement sécurisé',  desc: lang === 'ar' ? 'الدفع عند الاستلام'      : 'Paiement à la livraison'       },
-    { icon: RefreshCw,   title: lang === 'ar' ? 'إرجاع سهل'           : 'Retour facile',      desc: lang === 'ar' ? '7 أيام لتغيير رأيك'      : "7 jours pour changer d'avis"  },
-    { icon: ShoppingBag, title: lang === 'ar' ? 'جودة مضمونة'         : 'Qualité garantie',   desc: lang === 'ar' ? 'منتجات موثوقة'           : 'Articles vérifiés'             },
+    { icon: Truck,       fr_title: 'Livraison Algérie',  ar_title: 'توصيل عبر الجزائر',  fr_desc: 'Wilayat principales couvertes', ar_desc: 'تغطية الولايات الرئيسية' },
+    { icon: Shield,      fr_title: 'Paiement sécurisé',  ar_title: 'دفع آمن',             fr_desc: 'Paiement à la livraison',      ar_desc: 'الدفع عند الاستلام'      },
+    { icon: RefreshCw,   fr_title: 'Retour facile',      ar_title: 'إرجاع سهل',           fr_desc: "7 jours pour changer d'avis", ar_desc: '7 أيام لتغيير رأيك'      },
+    { icon: ShoppingBag, fr_title: 'Qualité garantie',   ar_title: 'جودة مضمونة',         fr_desc: 'Articles vérifiés',            ar_desc: 'منتجات موثوقة'           },
   ];
 
   return (
@@ -30,9 +30,11 @@ export default function HomePage() {
           className="absolute inset-0 w-full h-full object-cover opacity-40"
         />
         <div className="relative max-w-4xl mx-auto px-4 py-24 text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 leading-tight">
-            {t('heroTitle')}<br />
-            <span className="text-pink-400">{t('heroSubtitle')}</span>
+          <h1 className="text-3xl md:text-5xl font-bold mb-4 leading-tight">
+            {lang === 'ar'
+              ? <span className="text-white">{t('heroTitle')} <span className="text-pink-400">{t('heroSubtitle')}</span></span>
+              : <>{t('heroTitle')}<br /><span className="text-pink-400">{t('heroSubtitle')}</span></>
+            }
           </h1>
           <p className="text-gray-300 text-lg mb-8">{t('heroDesc')}</p>
           <Link href="/products" className="btn-primary text-lg px-8 py-3 inline-block">
@@ -67,13 +69,17 @@ export default function HomePage() {
       {/* Avantages */}
       <section className="bg-white dark:bg-gray-800 py-12 px-4">
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
-          {FEATURES.map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="text-center">
+          {FEATURES.map((f) => (
+            <div key={f.fr_title} className="text-center">
               <div className="inline-flex items-center justify-center w-12 h-12 bg-pink-50 dark:bg-pink-900/30 rounded-xl mb-3">
-                <Icon size={24} className="text-pink-600" />
+                <f.icon size={24} className="text-pink-600" />
               </div>
-              <h4 className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{title}</h4>
-              <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">{desc}</p>
+              <h4 className="font-semibold text-gray-800 dark:text-gray-100 text-sm">
+                {lang === 'ar' ? f.ar_title : f.fr_title}
+              </h4>
+              <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">
+                {lang === 'ar' ? f.ar_desc : f.fr_desc}
+              </p>
             </div>
           ))}
         </div>
