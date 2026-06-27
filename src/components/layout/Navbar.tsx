@@ -5,18 +5,20 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useLang } from '@/context/LanguageContext';
 
 const CATEGORIES = [
-  { label: 'Femme',      slug: 'femme' },
-  { label: 'Homme',      slug: 'homme' },
-  { label: 'Enfant',     slug: 'enfant' },
-  { label: 'Nouveau-né', slug: 'nouveau-ne' },
+  { fr: 'Femme',      ar: 'المرأة',    slug: 'femme' },
+  { fr: 'Homme',      ar: 'الرجل',     slug: 'homme' },
+  { fr: 'Enfant',     ar: 'الأطفال',   slug: 'enfant' },
+  { fr: 'Nouveau-né', ar: 'المواليد',  slug: 'nouveau-ne' },
 ];
 
 export default function Navbar() {
   const { user, logout, isAdmin } = useAuth();
   const { count } = useCart();
   const { theme, toggleTheme } = useTheme();
+  const { lang, toggleLang, t } = useLang();
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
@@ -29,16 +31,23 @@ export default function Navbar() {
           {CATEGORIES.map(cat => (
             <Link key={cat.slug} href={`/products?category=${cat.slug}`}
               className="text-gray-600 dark:text-gray-300 hover:text-pink-600 transition-colors text-sm font-medium">
-              {cat.label}
+              {lang === 'ar' ? cat.ar : cat.fr}
             </Link>
           ))}
         </nav>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          {/* Lang toggle */}
+          <button onClick={toggleLang}
+            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm font-bold text-gray-600 dark:text-gray-300 w-9 h-9 flex items-center justify-center border border-gray-200 dark:border-gray-700">
+            {lang === 'fr' ? 'ع' : 'FR'}
+          </button>
+          {/* Theme toggle */}
           <button onClick={toggleTheme} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
             {theme === 'dark'
               ? <Sun size={20} className="text-yellow-400" />
               : <Moon size={20} className="text-gray-600" />}
           </button>
+          {/* Panier */}
           <Link href="/cart" className="relative p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
             <ShoppingCart size={22} className="text-gray-700 dark:text-gray-200" />
             {count > 0 && (
@@ -50,10 +59,10 @@ export default function Navbar() {
           {user ? (
             <div className="flex items-center gap-2">
               {isAdmin ? (
-                <Link href="/admin" className="text-sm text-pink-600 font-medium hover:underline">Admin</Link>
+                <Link href="/admin" className="text-sm text-pink-600 font-medium hover:underline">{t('admin')}</Link>
               ) : (
                 <Link href="/orders" className="text-sm text-gray-600 dark:text-gray-300 font-medium hover:text-pink-600">
-                  Mes commandes
+                  {t('myOrders')}
                 </Link>
               )}
               <Link href="/profile" className="text-sm text-gray-500 dark:text-gray-300 hover:text-pink-600">
@@ -79,7 +88,7 @@ export default function Navbar() {
             <Link key={cat.slug} href={`/products?category=${cat.slug}`}
               onClick={() => setMenuOpen(false)}
               className="text-gray-700 dark:text-gray-300 py-1 hover:text-pink-600">
-              {cat.label}
+              {lang === 'ar' ? cat.ar : cat.fr}
             </Link>
           ))}
         </div>

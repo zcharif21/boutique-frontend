@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from '@/context/AuthContext';
 import { CartProvider } from '@/context/CartContext';
 import { ThemeProvider } from '@/context/ThemeContext';
+import { LanguageProvider } from '@/context/LanguageContext';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import './globals.css';
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr" suppressHydrationWarning>
       <body className={inter.className}>
         <ThemeProvider>
+          <LanguageProvider>
           <AuthProvider>
             <CartProvider>
               <Navbar />
@@ -30,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Toaster position="top-right" />
             </CartProvider>
           </AuthProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </body>
     </html>
